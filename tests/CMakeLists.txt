@@ -1,19 +1,18 @@
-file(GLOB TEST_SOURCES "*.cpp")
-
 add_library(pch INTERFACE)
 target_precompile_headers(pch INTERFACE pch.h)
 
-foreach(TEST_FILE ${TEST_SOURCES})
+if(DEFINED TEST_ONLY)
+  message(STATUS "Building only test: ${TEST_ONLY}.cpp")
+  set(TEST_FILES "${CMAKE_CURRENT_SOURCE_DIR}/${TEST_ONLY}.cpp")
+else()
+  file(GLOB TEST_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
+endif()
 
-  get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
+unset(TEST_ONLY CACHE)
 
-  set(TEST_EXEC test_${TEST_NAME})
-
-  add_executable(${TEST_EXEC} ${TEST_FILE})
-
-  target_link_libraries(${TEST_EXEC} PRIVATE pch)
-  target_compile_options(${TEST_EXEC} PRIVATE -Wfatal-errors)
-
-  add_test(NAME ${TEST_NAME} COMMAND ${TEST_EXEC})
-
+foreach(test_file ${TEST_FILES})
+  get_filename_component(test_name ${test_file} NAME_WE)
+  add_executable(${test_name} ${test_file})
+  add_test(NAME ${test_name} COMMAND ${test_name})
 endforeach()
+
