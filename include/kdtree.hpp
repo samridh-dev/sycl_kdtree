@@ -26,14 +26,9 @@
 #ifndef KDTREE_HPP
 #define KDTREE_HPP
 
-#ifdef SYCL_LANGUAGE_VERSION
-#define KDTREE__USE_SYCL 1
-#include <CL/sycl.hpp>
-#else 
-#define KDTREE__USE_SYCL 0
-#endif 
-
-#include "create.hpp"
+#include "pch.hpp"
+#include "create/create.hpp"
 #include "nn.hpp"
+#include "knn.hpp"
 
 #endif // KDTREE_HPP
