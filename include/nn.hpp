@@ -2,7 +2,7 @@
  * \file        nn.hpp
  * \author      Samridh D. Singh
  * \date        2025-02-01
- * \brief       Type traits to enforce template parameter types.
+ * \brief       containers for templates 
  * \details     
  *
  * \copyright   This file is part of the sycl_kdtree project.
@@ -23,58 +23,81 @@
  *              If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #ifndef KDTREE_NN_HPP
 #define KDTREE_NN_HPP
 
-///////////////////////////////////////////////////////////////////////////////
-/// HEADER                                                                  ///
-///////////////////////////////////////////////////////////////////////////////
-
-namespace kdtree {
-
-template <typename Ts, typename Tf, Ts dim, 
-          kdtree::layout maj = kdtree::layout::rowmajor,
-          typename Cq, typename Cs>
-Ts 
-nn(const Cq& q, const Cs& src, const Ts n,
-   Tf rmax = std::numeric_limits<Tf>::max());
-
-} // namespace kdtree
-
-///////////////////////////////////////////////////////////////////////////////
-/// IMPLEMENTATION                                                          ///
-///////////////////////////////////////////////////////////////////////////////
-
+#include "pch.hpp"
 #include "container.hpp"
-#include "internal.hpp"
-#include "traverse.hpp"
 
 namespace kdtree {
-namespace internal {
-namespace nn {
 
-template <typename Ts, typename Tf>
-struct result {
-  Ts idx;
-  Tf dst;
-  result() : idx(0), dst(std::numeric_limits<Tf>::max()) {}
+template<typename F, typename T, T dim,
+         kdtree::container::layout maj = kdtree::container::layout::row_major,
+         typename C_query, typename C_tree> 
+requires kdtree::container::container_1d<C_query> 
+      && kdtree::container::container<C_tree>
+      && std::is_integral_v<T>
+      && std::is_arithmetic_v<F>
+      && std::is_same_v<kdtree::container::get_primitive_t<C_query>,
+                        kdtree::container::get_primitive_t<C_tree>>
+T
+nn(const kdtree::context& ctx, const C_query& q, const C_tree& tree, 
+   const T n, const F rmax = std::numeric_limits<F>::max());
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///                                                                         ///
+///                                                                         ///
+///                                                                         ///
+///                                                                         ///
+///                                                                         ///
+///                             IMPLEMENTATION                              ///
+///                                                                         ///
+///                                                                         ///
+///                                                                         ///
+///                                                                         ///
+///                                                                         ///
+///////////////////////////////////////////////////////////////////////////////
+
+#include "traverse/traverse.hpp"
+#include "internal/dist.hpp"
+
+namespace kdtree   {
+namespace internal {
+namespace nn       {
+
+template <typename F, typename T>
+requires std::is_arithmetic_v<F> && std::is_integral_v<T>
+struct result_t {
+  F dst;
+  T idx;
+  result_t() : dst{std::numeric_limits<F>::max()}, idx{0} {}
 };
 
-template <typename Ts, typename Tf, Ts dim, kdtree::layout maj,
-          typename Cq, typename Cs>
-struct process {
-  void operator()(result<Ts, Tf>& res, const Cq& q, const Cs& src,
-                  const Ts n, const Ts idx, Tf& r) const {
+template <typename F, typename T, T dim, kdtree::container::layout maj,
+          typename C_query, typename C_tree>
+struct f_process {
+
+  void 
+  operator()(result_t<F, T>& res, const C_query& q, const C_tree& src,
+             const T n, const T idx, F* rmax) const {
 
     using kdtree::internal::dist::euclidian;
-    
-    Tf dst = euclidian<Ts, Tf, dim, maj, Cq, Cs>(q, dim, src, n, 0, idx);
+
+    F dst{
+      euclidian<F, T, dim, maj, C_query, maj, C_tree>(q, 1, 0, src, n, idx)
+    };
 
     if (dst < res.dst) {
+
       res.dst = dst;
       res.idx = idx;
-      r       = dst;
+
+      if (dst < *rmax) {
+        *rmax = dst;
+      }
+
     }
 
   }
@@ -84,21 +107,37 @@ struct process {
 }  // namespace internal
 }  // namespace kdtree
 
-template <typename Ts, typename Tf, Ts dim, kdtree::layout maj,
-          typename Cq, typename Cs>
-Ts 
-kdtree::nn(const Cq& q, const Cs& src, const Ts n, Tf rmax) {
+template<typename F, typename T, T dim, kdtree::container::layout maj,
+         typename C_query, typename C_tree> 
+requires kdtree::container::container_1d<C_query> 
+      && kdtree::container::container<C_tree>
+      && std::is_integral_v<T>
+      && std::is_arithmetic_v<F>
+      && std::is_same_v<kdtree::container::get_primitive_t<C_query>,
+                        kdtree::container::get_primitive_t<C_tree>>
+T
+kdtree::nn(const kdtree::context& ctx, const C_query& q, const C_tree& tree, 
+           const T n, const F rmax) {
 
-  using kdtree::internal::nn::process;
-  using kdtree::internal::nn::result;
+  using kdtree::internal::traverse::f_splitdim;
+  using kdtree::internal::nn::f_process;
+  using kdtree::internal::nn::result_t;
 
-  struct result<Ts, Tf> res;
+  (void) ctx;
 
-  kdtree::traverse<result<Ts, Tf>, process<Ts, Tf, dim, maj, Cq, Cs>, 
-                   Ts, Tf, dim, maj, Cq, Cs>
-                  (res, q, src, n, rmax);
+  struct result_t<F, T> result;
 
-  return res.idx;
+  kdtree::traverse<
+    result_t<F, T>,
+    f_process<F, T, dim, maj, C_query, C_tree>,
+    f_splitdim<T, dim, maj, C_tree>,
+    F, T, dim, maj,
+    C_query, C_tree
+  > (result, q, tree, n, rmax);
+
+  return result.idx;
+
 }
 
 #endif // KDTREE_NN_HPP
+
