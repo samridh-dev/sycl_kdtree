@@ -1,1 +1,3 @@
-# SYCL_KDTREE
+# sycl_kdtree
+
+# Usage
