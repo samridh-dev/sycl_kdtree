@@ -21,77 +21,19 @@
 
 #include "pch.h"
 
-#include <kdtree.hpp>
+#include <create/create.hpp>
 
 #define USE_LARGE_TEST 1
 
-// ingowald/cpukd
-namespace internal {
-
-template <typename Ts>
-inline Ts 
-level_of(Ts i) {
-  Ts l = 0;
-  i = i + 1; 
-  while (i > 1) {
-    i >>= 1;
-    ++l;
-  }
-  return l;
-}
-
-template <typename Ts, Ts dim, kdtree::layout maj, typename C,
-          typename Tv = typename C::value_type>
-bool 
-none_above(const C &src, Ts n, Ts i, Ts d, const Tv &v) {
-  if (i >= n) return true;
-  auto x = kdtree::internal::id<Ts, dim, maj>(src, n, i, d);
-  if (x > v) return false;
-  return none_above<Ts, dim, maj>(src, n, 2*i+1, d, v)
-      && none_above<Ts, dim, maj>(src, n, 2*i+2, d, v);
-}
-
-template <typename Ts, Ts dim, kdtree::layout maj, typename C,
-          typename Tv = typename C::value_type>
-bool 
-none_below(const C &src, Ts n, Ts i, Ts d, const Tv &v) {
-  if (i >= n) return true;
-  auto x = kdtree::internal::id<Ts, dim, maj>(src, n, i, d);
-  if (x < v) return false;
-  return none_below<Ts, dim, maj>(src, n, 2*i+1, d, v)
-      && none_below<Ts, dim, maj>(src, n, 2*i+2, d, v);
-}
-
-template <typename Ts, Ts dim, kdtree::layout maj, typename C>
-bool 
-verify_subtree(const C &src, Ts n, Ts i = Ts(0)) {
-  if (i >= n) return true;
-  Ts l = level_of(i);
-  Ts d = l % dim;
-  auto v = kdtree::internal::id<Ts, dim, maj>(src, n, i, d);
-  if (!none_above<Ts, dim, maj>(src, n, 2*i+1, d, v)) return false;
-  if (!none_below<Ts, dim, maj>(src, n, 2*i+2, d, v)) return false;
-  return verify_subtree<Ts, dim, maj>(src, n, 2*i+1)
-      && verify_subtree<Ts, dim, maj>(src, n, 2*i+2);
-}
-
-} // namespace internal
-
-template <typename Ts, Ts dim, kdtree::layout maj = kdtree::layout::rowmajor, 
-          typename C>
-bool verify_kdtree(const C &src) {
-  const Ts n = src.size() / dim;
-  return internal::verify_subtree<Ts, dim, maj>(src, n);
-}
-
-
 TEST_CASE("[basic_example] kdtree::create") {
 
-  using type_v = int;
-  using type_s = uint8_t;
+  using Tv = int;
+  using Ts = std::size_t;
 
-  constexpr type_s dim    = 2;
-  constexpr std::size_t n = 10;
+  constexpr Ts dim    = 2;
+  constexpr Ts n = 10;
+
+  kdtree::context ctx;
 
   auto log_vec = [](const auto& vec) {
     std::ostringstream oss;
@@ -121,8 +63,8 @@ TEST_CASE("[basic_example] kdtree::create") {
   };
 
   SUBCASE("[type=[]][maj=row]") {
-    std::vector<type_v> points = {
-      10, 15,  
+    std::vector<Tv> vec = {
+      10, 15,
       46, 63,
       68, 21,
       40, 33,
@@ -134,7 +76,7 @@ TEST_CASE("[basic_example] kdtree::create") {
       53, 67,
     };
 
-    std::vector<type_v> ans = {
+    std::vector<Tv> ans = {
       46, 63,
       15, 43,
       53, 67,
@@ -147,37 +89,37 @@ TEST_CASE("[basic_example] kdtree::create") {
       25, 54,
     };
 
-    kdtree::create<type_s, dim>(points, n);
+    kdtree::create<Ts, dim, kdtree::container::layout::row_major>(ctx, vec, n);
 
-    INFO(log_vec(points));
+    INFO(log_vec(vec));
     INFO(log_vec(ans));
 
-    CHECK(points == ans);
+    CHECK(vec == ans);
   }
 
   SUBCASE("[type=[]][maj=col]") {
 
-    std::vector<type_v> points = {
+    std::vector<Tv> vec = {
       10, 46, 68, 40, 25, 15, 44, 45, 62, 53,
       15, 63, 21, 33, 54, 43, 58, 40, 69, 67,
     };
 
-    std::vector<type_v> ans = {
+    std::vector<Tv> ans = {
       46, 15, 53, 40, 44, 68, 62, 10, 45, 25,
       63, 43, 67, 33, 58, 21, 69, 15, 40, 54,
     };
 
-    kdtree::create<type_s, dim, kdtree::layout::colmajor>(points, n);
+    kdtree::create<Ts, dim, kdtree::container::layout::col_major>(ctx, vec, n);
 
-    INFO(log_vec(points));
+    INFO(log_vec(vec));
     INFO(log_vec(ans));
 
-    CHECK(points == ans);
+    CHECK(vec == ans);
   }
 
   SUBCASE("[type=[][]][maj=row]") {
-    std::vector<std::vector<type_v>> points = {
-      { 10, 15 }, 
+    std::vector<std::vector<Tv>> vec = {
+      { 10, 15 },
       { 46, 63 },
       { 68, 21 },
       { 40, 33 },
@@ -189,7 +131,7 @@ TEST_CASE("[basic_example] kdtree::create") {
       { 53, 67 },
     };
 
-    std::vector<std::vector<type_v>> ans = {
+    std::vector<std::vector<Tv>> ans = {
       { 46, 63 },
       { 15, 43 },
       { 53, 67 },
@@ -202,37 +144,100 @@ TEST_CASE("[basic_example] kdtree::create") {
       { 25, 54 },
     };
 
-    kdtree::create<type_s, dim>(points, n);
+    kdtree::create<Ts, dim, kdtree::container::layout::row_major>(ctx, vec, n);
 
-    INFO(log_vec2(points));
+    INFO(log_vec2(vec));
     INFO(log_vec2(ans));
 
-    CHECK(points == ans);
+    CHECK(vec == ans);
   }
 
   SUBCASE("[type=[][]][maj=col]") {
-    std::vector<std::vector<type_v>> points = {
+    std::vector<std::vector<Tv>> vec = {
       { 10, 46, 68, 40, 25, 15, 44, 45, 62, 53 },
       { 15, 63, 21, 33, 54, 43, 58, 40, 69, 67 },
     };
 
-    std::vector<std::vector<type_v>> ans = {
+    std::vector<std::vector<Tv>> ans = {
       { 46, 15, 53, 40, 44, 68, 62, 10, 45, 25 },
       { 63, 43, 67, 33, 58, 21, 69, 15, 40, 54 },
     };
 
-    kdtree::create<type_s, dim, kdtree::layout::colmajor>(points, n);
+    kdtree::create<Ts, dim, kdtree::container::layout::col_major>(ctx, vec, n);
 
-    INFO(log_vec2(points));
+    INFO(log_vec2(vec));
     INFO(log_vec2(ans));
 
-    CHECK(points == ans);
+    CHECK(vec == ans);
   }
-}
 
+}
 
 #if USE_LARGE_TEST
 
+// ingowald/cpukd
+namespace internal {
+
+template <typename T>
+inline constexpr T
+level_of(T i) {
+  T l{0};
+  i = i + 1;
+  while (i > 1) {
+    i >>= 1;
+    ++l;
+  }
+  return l;
+}
+
+template <typename T, T dim, kdtree::container::layout maj, typename C,
+          typename Tv = typename C::value_type>
+bool
+none_above(const C &src, const T n, const T i, const T d, const Tv &v) {
+  if (i >= n) return true;
+  Tv x{kdtree::container::id<T, dim, maj>(src, n, i, d)};
+  if (x > v) return false;
+  return none_above<T, dim, maj>(src, n, 2 * i + 1, d, v)
+      && none_above<T, dim, maj>(src, n, 2 * i + 2, d, v);
+}
+
+template <typename T, T dim, kdtree::container::layout maj, typename C,
+          typename Tv = typename C::value_type>
+bool
+none_below(const C &src, const T n, const T i, const T d, const Tv &v) {
+  if (i >= n) return true;
+  Tv x{kdtree::container::id<T, dim, maj>(src, n, i, d)};
+  if (x < v) return false;
+  return none_below<T, dim, maj>(src, n, 2 * i + 1, d, v)
+      && none_below<T, dim, maj>(src, n, 2 * i + 2, d, v);
+}
+
+template <typename T, T dim, kdtree::container::layout maj, typename C,
+          typename Tv = typename C::value_type>
+bool
+verify_subtree(const C &src, const T n, const T i = T(0)) {
+  if (i >= n) return true;
+  T l {level_of(i)};
+  T d {l % dim};
+  Tv v{kdtree::container::id<T, dim, maj>(src, n, i, d)};
+  if (!none_above<T, dim, maj>(src, n,  2 * i + 1, d, v)) return false;
+  if (!none_below<T, dim, maj>(src, n,  2 * i + 2, d, v)) return false;
+  return verify_subtree<T, dim, maj>(src, n,  2 * i + 1)
+      && verify_subtree<T, dim, maj>(src, n,  2 * i + 2);
+}
+
+} // namespace internal
+
+template <typename T, T dim,
+          kdtree::container::layout maj = kdtree::container::layout::row_major,
+          typename C>
+bool 
+verify_kdtree(const C &src) {
+  const T n{static_cast<T>(src.size()) / dim};
+  return internal::verify_subtree<T, dim, maj>(src, n);
+}
+
+#include <random>
 template <typename C, typename T = typename C::value_type>
 static void 
 generate_random_dataset(C& src, T xmin, T xmax) {
@@ -250,6 +255,8 @@ test(const std::string& tag, std::size_t N, int xlim[2]) {
     return;
   }
 
+  kdtree::context ctx;
+
   SUBCASE(("[N=" + std::to_string(N) + "]" + tag).c_str()) {
     
     CAPTURE(xlim[0]);
@@ -259,29 +266,29 @@ test(const std::string& tag, std::size_t N, int xlim[2]) {
         
     SUBCASE("[Ts=uint32_t][type=[]][maj=row]") {
       using Ts = uint32_t;
-      constexpr auto maj = kdtree::layout::rowmajor;
+      constexpr auto maj{kdtree::container::layout::row_major};
 
       std::vector<T> vec(N * dim);
       generate_random_dataset(vec, xlim[0], xlim[1]);
 
-      kdtree::create<Ts, static_cast<Ts>(dim), maj>(vec, N);
+      kdtree::create<Ts, static_cast<Ts>(dim), maj>(ctx, vec, N);
       CHECK(verify_kdtree<Ts, dim, maj>(vec));
     }
 
     SUBCASE("[Ts=uint32_t][type=[]][maj=col]") {
       using Ts = uint64_t;
-      constexpr auto maj = kdtree::layout::colmajor;
+      constexpr auto maj{kdtree::container::layout::col_major};
 
       std::vector<T> vec(N * dim);
       generate_random_dataset(vec, xlim[0], xlim[1]);
 
-      kdtree::create<Ts, static_cast<Ts>(dim), maj>(vec, N);
+      kdtree::create<Ts, dim, maj>(ctx, vec, N);
       CHECK(verify_kdtree<Ts, dim, maj>(vec));
     }
 
     SUBCASE("[Ts=uint32_t][type=[][]][maj=row]") {
       using Ts = uint32_t;
-      constexpr auto maj = kdtree::layout::rowmajor;
+      constexpr auto maj{kdtree::container::layout::row_major};
 
       std::vector<std::vector<T>> vec(N);
       {
@@ -292,13 +299,13 @@ test(const std::string& tag, std::size_t N, int xlim[2]) {
         }
       }
 
-      kdtree::create<Ts, static_cast<Ts>(dim), maj>(vec, N);
+      kdtree::create<Ts, static_cast<Ts>(dim), maj>(ctx, vec, N);
       CHECK(verify_kdtree<Ts, dim, maj>(vec));
     }
 
     SUBCASE("[Ts=uint32_t][type=[][]][maj=col]") {
       using Ts = uint64_t;
-      constexpr auto maj = kdtree::layout::colmajor;
+      constexpr auto maj{kdtree::container::layout::col_major};
 
       std::vector<std::vector<T>> vec(dim);
       {
@@ -309,7 +316,7 @@ test(const std::string& tag, std::size_t N, int xlim[2]) {
         }
       }
 
-      kdtree::create<Ts, static_cast<Ts>(dim), maj>(vec, N);
+      kdtree::create<Ts, dim, maj>(ctx, vec, N);
       CHECK(verify_kdtree<Ts, dim, maj>(vec));
     }
 
@@ -317,34 +324,26 @@ test(const std::string& tag, std::size_t N, int xlim[2]) {
 
 }
 
-TEST_CASE("kdtree::create tests") {
-  
-  int xlim[2] = { -64, 64 };
-  size_t N_max = 4;
-
-  std::vector<size_t> nvec;
-  for (size_t i = 0; i <= N_max; ++i) nvec.push_back(i);
-  nvec.insert(nvec.end(), {512});
-
-  for (auto n : nvec) {
-    test<uint8_t,  8>("[u08_8] kdtree::create", n, xlim);
-    test<uint16_t, 9>("[u16_9] kdtree::create", n, xlim);
-    test<uint32_t, 6>("[u32_6] kdtree::create", n, xlim);
-    test<uint64_t, 3>("[u64_3] kdtree::create", n, xlim);
-
-    test<int8_t,  1>("[i08_1] kdtree::create", n, xlim);
-    test<int16_t, 2>("[i16_2] kdtree::create", n, xlim);
-    test<int32_t, 4>("[i32_4] kdtree::create", n, xlim);
-    test<int64_t, 8>("[i64_8] kdtree::create", n, xlim);
-
-    test<float, 2>("[f32_2] kdtree::create", n, xlim);
-    test<float, 5>("[f32_5] kdtree::create", n, xlim);
-    test<float, 9>("[f32_9] kdtree::create", n, xlim);
-
-    test<double, 3>("[f64_3] kdtree::create", n, xlim);
-    test<double, 7>("[f64_7] kdtree::create", n, xlim);
-  }
-
+#define TEST_CREATE(index, type, dim) \
+TEST_CASE("[case=" #index "] kdtree::create") { \
+  int xlim[2] = { -64, 64 }; \
+  size_t N_MAX{32}; \
+  std::vector<size_t> nvec; \
+  for (size_t i{0}; i <= N_MAX; ++i) nvec.push_back(i); \
+  nvec.insert(nvec.end(), {64, 256, 512}); \
+  for (auto n : nvec) test<type, dim>("[type_dim]", n, xlim); \
 }
+
+TEST_CREATE(1,  uint16_t, 1)
+TEST_CREATE(2,  uint32_t, 1)
+TEST_CREATE(3,  uint64_t, 3)
+TEST_CREATE(4,  int16_t,  4)
+TEST_CREATE(5,  int32_t,  4)
+TEST_CREATE(6,  int64_t,  8)
+TEST_CREATE(7,  float,    2)
+TEST_CREATE(8,  float,    5)
+TEST_CREATE(9,  float,    9)
+TEST_CREATE(10, double,   3)
+TEST_CREATE(11, double,   7)
 
 #endif // USE_LARGE_TEST
