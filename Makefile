@@ -3,8 +3,13 @@ BUILD_TEST_DIR = cmake/build_test
 BIN_DIR        = bin
 EXECUTABLE     = main
 
-# Default build type
 CMAKE_BUILD_TYPE = Debug
+
+ifdef fname
+    TEST_ARG = -DTEST_ONLY=$(fname)
+else
+    TEST_ARG =
+endif
 
 .PHONY: all
 all: $(BUILD_DIR)/Makefile
@@ -12,7 +17,8 @@ all: $(BUILD_DIR)/Makefile
 
 $(BUILD_DIR)/Makefile:
 	mkdir -p $(BUILD_DIR)
-	cd $(BUILD_DIR) && cmake -DBUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) ../..
+	cd $(BUILD_DIR) && cmake -DBUILD_TESTS=OFF \
+		-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) ../..
 
 .PHONY: fast
 fast:
@@ -29,7 +35,8 @@ test: $(BUILD_TEST_DIR)/Makefile
 
 $(BUILD_TEST_DIR)/Makefile:
 	mkdir -p $(BUILD_TEST_DIR)
-	cd $(BUILD_TEST_DIR) && cmake -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) ../..
+	cd $(BUILD_TEST_DIR) && cmake -DBUILD_TESTS=ON \
+		-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) $(TEST_ARG) ../..
 
 .PHONY: clean
 clean:
@@ -40,4 +47,3 @@ rebuild: clean all
 
 .PHONY: rebuild_fast
 rebuild_fast: clean fast
-
