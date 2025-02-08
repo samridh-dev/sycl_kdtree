@@ -2,7 +2,7 @@
  * \file        container.hpp
  * \author      Samridh D. Singh
  * \date        2025-02-01
- * \brief       Type traits to enforce template parameter types.
+ * \brief       containers for templates 
  * \details     
  *
  * \copyright   This file is part of the sycl_kdtree project.
@@ -23,80 +23,122 @@
  *              If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef KDTREE_CONTAINER_HPP
-#define KDTREE_CONTAINER_HPP
+#ifndef KDTREE_INTERNAL_CONTAINER_HPP
+#define KDTREE_INTERNAL_CONTAINER_HPP
 
-#include <type_traits>
-#include <utility>
+#include "pch.hpp"
 
 namespace kdtree {
-
 namespace container {
 
-template <class T, class = void>
-struct is_1d : std::false_type {};
+enum layout { row_major, col_major };
 
-template <class T, class = void>
-struct is_2d : std::false_type {};
+template <typename C>
+concept container_1d =
+  requires(C c, std::size_t i) { { c[i] }; } 
+  &&
+  std::is_arithmetic_v<std::remove_cvref_t<
+    decltype(std::declval<C&>()[std::declval<std::size_t>()])
+  >>;
 
-template <class T>
-struct is_1d<T, std::void_t<
-  typename T::value_type,
-  decltype(std::declval<T&>()[std::declval<std::size_t>()])
->> : std::bool_constant< std::is_fundamental_v<typename T::value_type> > {};
+template <typename C>
+concept container_2d =
+  requires(C c, std::size_t i, std::size_t j) { { c[i] }; { c[i][j] }; } 
+  &&
+  container_1d<std::remove_cvref_t<
+    decltype(std::declval<C&>()[std::declval<std::size_t>()])
+  >>
+  &&
+  std::is_arithmetic_v<std::remove_cvref_t<
+    decltype(std::declval<C&>()[std::declval<std::size_t>()]
+                               [std::declval<std::size_t>()])
+  >>;
 
-template <class T>
-struct is_2d<T, std::void_t<
-  typename T::value_type,
-  decltype(std::declval<T&>()[std::declval<std::size_t>()]),
-  decltype(std::declval<T&>()[std::declval<std::size_t>()]
-                             [std::declval<std::size_t>()])
->> : std::bool_constant< is_1d<typename T::value_type>::value > {};
+template <typename C> concept container = container_1d<C> || container_2d<C>;
 
-template <typename T>
-struct is_1d<T*> : std::true_type {};
-
-template <typename T>
-struct is_2d<T**> : std::true_type {};
-
-template <typename T>
-constexpr bool is_1d_v = is_1d<T>::value;
-
-template <typename T>
-constexpr bool is_2d_v = is_2d<T>::value;
-
-
-template <typename T, typename enable = void>
-struct get_primitive_type {
-    using type = void;
+template <typename C>
+requires container<C>
+struct get_primitive_impl {
+  using type = std::remove_cvref_t<
+    decltype(std::declval<C&>()[std::declval<std::size_t>()])
+  >;
 };
 
-template <typename T>
-struct get_primitive_type<T, std::enable_if_t<is_1d_v<T>>> {
-    using type = typename T::value_type;
+template <container_1d C>
+struct get_primitive_impl<C> {
+  using type = std::remove_cvref_t<
+    decltype(std::declval<C&>()[std::declval<std::size_t>()])
+  >;
+};
+template <container_2d C>
+struct get_primitive_impl<C> {
+  using type = std::remove_cvref_t<
+    decltype(std::declval<C&>()[std::declval<std::size_t>()]
+                               [std::declval<std::size_t>()])
+ >;
 };
 
-template <typename T>
-struct get_primitive_type<T, std::enable_if_t<is_2d_v<T>>> {
-    using type = typename get_primitive_type<typename T::value_type>::type;
-};
+template <typename C>
+using get_primitive_t = typename get_primitive_impl<C>::type;
 
-template <typename T>
-struct get_primitive_type<T*> {
-    using type = typename get_primitive_type<T>::type;
-};
+// ID
 
-template <typename T>
-struct get_primitive_type<T**> {
-    using type = typename get_primitive_type<T>::type;
-};
+KD__IMPLEMENTATION
+template <typename T, T dim, kdtree::container::layout maj, typename C>
+requires container<C> && std::is_integral_v<T>
+constexpr auto&
+id(C& v, const T n, const T i_, const T j_) {
 
-template <typename T>
-using get_primitive_type_t = typename get_primitive_type<T>::type;
+  using enum kdtree::container::layout;
 
+  if constexpr (container_1d<C>) {
+    if constexpr (maj == row_major) {
+      return v[static_cast<std::make_unsigned_t<T>>(dim * i_ + j_)];
+    } else {
+      return v[static_cast<std::make_unsigned_t<T>>(n * j_ + i_)];
+    }
+  }
+
+  else if constexpr (container_2d<C>) {
+    if constexpr (maj == row_major) {
+      return v[static_cast<std::make_unsigned_t<T>>(i_)]
+              [static_cast<std::make_unsigned_t<T>>(j_)];
+    } else {
+      return v[static_cast<std::make_unsigned_t<T>>(j_)]
+              [static_cast<std::make_unsigned_t<T>>(i_)];
+    }
+  }
+
+}
+
+KD__IMPLEMENTATION
+template <typename T, T dim, kdtree::container::layout maj, typename C>
+requires container<C> && std::is_integral_v<T>
+constexpr void
+swap(C& v, const T n, const T i_, const T j_) {
+
+  auto lswap = [&](T ax) {
+    const auto tmp = id<T, dim, maj>(v, n, i_, ax);
+    id<T, dim, maj>(v, n, i_, ax) = id<T, dim, maj>(v, n, j_, ax);
+    id<T, dim, maj>(v, n, j_, ax) = tmp;
+  };
+
+  if constexpr (dim > 8) {
+    for (T d = 0; d < dim; ++d) lswap(d);
+  } else {
+    if constexpr (dim >= 1) lswap(0);
+    if constexpr (dim >= 2) lswap(1);
+    if constexpr (dim >= 3) lswap(2);
+    if constexpr (dim >= 4) lswap(3);
+    if constexpr (dim >= 5) lswap(4);
+    if constexpr (dim >= 6) lswap(5);
+    if constexpr (dim >= 7) lswap(6);
+    if constexpr (dim >= 8) lswap(7);
+  }
+
+}
 
 } // namespace container
-
 } // namespace kdtree
-  
-#endif // KDTREE_CONTAINER_HPP
+
+#endif // KDTREE_INTERNAL_CONTAINER_HPP
