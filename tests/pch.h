@@ -16,5 +16,13 @@
 #include <array>
 #include <iterator>
 #include <sstream>
+#include <vector>
+#include <array>
+#include <list>
+#include <deque>
+#include <string>
+#include <set>
+#include <map>
+#include <span>
 
 #endif // PCH_H
