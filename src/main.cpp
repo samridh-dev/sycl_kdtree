@@ -1,24 +1,27 @@
-#include <kdtree.hpp>
-
 #include <iostream>
-#include <vector>
 #include <random>
 #include <chrono>
-#include <fstream>
 
-int 
+#include <kdtree.hpp>
+#include <omp.h>
+
+volatile int sink = 0;
+
+int
 main(void) {
 
 #if 0
 
   using type_v = int;
-  using type_s = int;
-  using type_f = float;
+  using type_s = std::size_t;
 
   constexpr type_s dim = 2;
+  constexpr type_s n   = 10;
 
-  std::vector<type_v> points = {
-    10, 15,  
+  kdtree::context ctx;
+
+  std::vector<type_v> vec = {
+    10, 15,
     46, 63,
     68, 21,
     40, 33,
@@ -30,80 +33,137 @@ main(void) {
     53, 67,
   };
 
-  kdtree::create<type_s, dim>(points, 10);
+  std::cout << "input : ";
+  for (auto v : vec) std::cout << v << " ";
+  std::cout << std::endl;
 
-  std::vector<type_v> query = {11, 12};
+  kdtree::create<type_s, dim>(ctx, vec, n);
 
-  type_f rmax = std::numeric_limits<type_f>::max();
-  auto idx = kdtree::nn<type_s, type_f, dim>(query, points, 10, rmax);
-  
-  /*
+  std::cout << "tree : ";
+  for (auto v : vec) std::cout << v << " ";
+  std::cout << std::endl;
+
+  std::vector<type_v> q{ 50, 50 };
+
+  const auto idx = kdtree::nn<int, int, dim>(ctx, q, vec, n);
+
   std::cout << "Nearest neighbor index: " << idx << "\n";
   std::cout << "Nearest neighbor coordinates: ("
-            << points[idx * dim] << ", "
-            << points[idx * dim + 1] << ")\n";
-            */
+            << vec[static_cast<std::size_t>(idx) * dim + 0] << ", "
+            << vec[static_cast<std::size_t>(idx) * dim + 1] << ")\n";
 
+  constexpr int k {4};
+  const auto kidx = kdtree::knn<int, int, dim>(ctx, q, vec, n, k);
+
+  std::cout << "k-Nearest neighbor index: ";
+  for (auto ki: kidx) std::cout << ki << " "; 
+  std::cout << std::endl;
+
+  std::cout << "k-Nearest neighbor coordinates: ";
+  for (auto ki: kidx) std::cout << " ("
+            << vec[static_cast<std::size_t>(ki) * dim + 0] << ", "
+            << vec[static_cast<std::size_t>(ki) * dim + 1] << ") ";
+  std::cout << std::endl;
+
+  return 0;
 
 #else
-  
+
   using type_v = float;
-  using type_s = int32_t;
-
-  constexpr type_s n   = 1 << 17;
-  constexpr type_s dim = 3;
-  constexpr auto   maj = kdtree::layout::rowmajor;
-
-  std::vector<type_v> points(n * dim);
+  using type_s = std::size_t;
   
-   {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<type_v> dist(0.0f, 10.0f);
-    for (auto &v : points) v = dist(gen);
-  }
+  constexpr auto   maj  {kdtree::container::layout::row_major};
+  constexpr type_s dim  {3};
+  constexpr type_s n    {1 << 17};
+  constexpr type_s k    {128};
 
-  auto beg = std::chrono::steady_clock::now();
-  kdtree::create<type_s, dim, maj>(points, n);
-  auto end = std::chrono::steady_clock::now();
-  auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end - beg);
-  std::cout << "KD-Tree creation time: " << dur.count() << " ms\n";
+  kdtree::context ctx;
 
-  constexpr std::size_t imax = 1e6;
-
+  std::vector<type_v> vec(dim * n);
   std::vector<type_v> q(dim);
 
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_real_distribution<type_v> dist(0.0f, 10.0f);
+  std::cout << "[metadata] "
+            << "dim : " << dim << ", "
+            << "n : "   << n   << ", "
+            << std::endl;
 
-  beg = std::chrono::steady_clock::now();
-
-#if 0
-  type_v rmax = std::numeric_limits<type_f>::max();
-#else
-  type_v rmax = 1e-9;
-#endif
-
-  std::vector<type_s> result(imax);
-  for (int i = 0; i < imax; ++i) {
-    for (type_s j = 0; j < dim; ++j) { q[j] = dist(gen); }
-    result[i] = kdtree::nn<type_s, type_v, dim, maj>(q, points, n, rmax); 
-  }
-  end = std::chrono::steady_clock::now();
-  dur = std::chrono::duration_cast<std::chrono::milliseconds>(end - beg);
-
-  std::cout << "Nearest neighbor queries (imax = " << imax << ") took: " 
-            << dur.count() << " ms\n";
-
-  { // saving results to ensure nn is being run.
-    std::ofstream fp("results.txt");
-    if (!fp) { std::cerr << "Error opening file for writing.\n"; return 1; }
-    for (const auto &idx : result) { fp << idx << "\n"; }
-    fp.close();
+  {
+    std::mt19937 rng(std::random_device{}());
+    #if 1
+      constexpr type_v v_min{0e0};
+      constexpr type_v v_max{1e0};
+      std::uniform_real_distribution<type_v> dist(v_min, v_max);
+    #else
+      constexpr type_v mean   {0.5f};
+      constexpr type_v stddev {0.1f};
+      std::normal_distribution<type_v> dist(mean, stddev);
+    #endif
+    for (auto& v : vec) { v = dist(rng); }
   }
 
- 
+  { 
+    auto beg{std::chrono::high_resolution_clock::now()};
+    kdtree::create<type_s, dim, maj>(ctx, vec, n);
+    auto end{std::chrono::high_resolution_clock::now()};
+    auto dur{std::chrono::duration_cast<std::chrono::milliseconds>(end - beg)};
+    std::cout << "[kdtree::create]: " << dur.count() << " ms" << std::endl;
+  }
+
+  const type_s imax{n};
+  const float  rmax{1e-0f};
+
+  {
+
+    auto beg{std::chrono::high_resolution_clock::now()};
+    #pragma omp parallel for
+    for (type_s i = 0; i < imax; ++i) {
+
+      {
+        constexpr type_v v_min{0e0};
+        constexpr type_v v_max{1e0};
+        std::mt19937 rng(std::random_device{}());
+        std::uniform_real_distribution<type_v> dist(v_min, v_max);
+        for (auto& qi : q) { qi = dist(rng); }
+      }
+
+      const auto idx = kdtree::nn<float, int, dim, maj>(ctx, q, vec, n, rmax);
+
+      sink = idx;
+
+    }
+
+    auto end{std::chrono::high_resolution_clock::now()};
+    auto dur{std::chrono::duration_cast<std::chrono::milliseconds>(end - beg)};
+    std::cout << "[kdtree::nn]: " << dur.count() << " ms" << std::endl;
+
+  }
+
+  {
+
+    auto beg{std::chrono::high_resolution_clock::now()};
+    #pragma omp parallel for
+    for (type_s i = 0; i < imax; ++i) {
+
+      {
+        constexpr type_v v_min{0e0};
+        constexpr type_v v_max{1e0};
+        std::mt19937 rng(std::random_device{}());
+        std::uniform_real_distribution<type_v> dist(v_min, v_max);
+        for (auto& qi : q) { qi = dist(rng); }
+      }
+
+      auto idx = kdtree::knn<float, int, dim, maj>(ctx, q, vec, n, k);
+
+      sink = idx[k-1];
+
+    }
+
+    auto end{std::chrono::high_resolution_clock::now()};
+    auto dur{std::chrono::duration_cast<std::chrono::milliseconds>(end - beg)};
+    std::cout << "[kdtree::knn]: " << dur.count() << " ms" << std::endl;
+
+  }
+
 #endif
 
 }
