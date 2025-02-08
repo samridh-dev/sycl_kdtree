@@ -101,11 +101,6 @@ maxheapify(C_idx& idx, C_dst& dst, const T k, const T i = T{0}) {
     j = b;
   }
 
-KD__IMPLEMENTATION
-template <typename T, T dim, kdtree::container::layout maj, typename C>
-requires container<C> && std::is_integral_v<T>
-constexpr auto&
-id(C& v, const T n, const T i_, const T j_) {
 }
 
 template <typename T, T dim, kdtree::container::layout maj,
