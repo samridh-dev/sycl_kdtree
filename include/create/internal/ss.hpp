@@ -55,14 +55,15 @@ ss(const T s, const T n, const T L);
 
 #include "../../internal/bsr.hpp"
 #include "../../internal/lrchild.hpp"
+#include "../../internal/minmax.hpp"
 
 template <typename T>
 requires std::is_integral_v<T>
 constexpr inline T
 kdtree::internal::create::ss(const T s, const T n, const T L) {
 
-  using std::min;
-  using std::max;
+  using kdtree::internal::min;
+  using kdtree::internal::max;
 
 #if 1
   if (s >= n) return 0;

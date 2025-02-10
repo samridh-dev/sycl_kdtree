@@ -57,6 +57,7 @@ sb(const T s, const T n, const T L);
 #include "ss.hpp"
 #include "../../internal/bsr.hpp"
 #include "../../internal/lrchild.hpp"
+#include "../../internal/minmax.hpp"
 
 template <typename T>
 requires std::is_integral_v<T>
@@ -64,7 +65,7 @@ constexpr inline T
 kdtree::internal::create::sb(const T s, const T n, const T L) {
 
   using kdtree::internal::bsr;
-  using std::min;
+  using kdtree::internal::min;
 
 #if 1
 
