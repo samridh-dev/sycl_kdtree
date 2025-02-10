@@ -53,7 +53,7 @@ abs(const T n);
 template <typename T>
 constexpr inline T
 kdtree::internal::abs(const T n) {
-  return (n > 0) ? n : -n;
+  return (n >= 0) ? n : -n;
 }
 
 #endif // KDTREE_INTERNAL_ABS_HPP

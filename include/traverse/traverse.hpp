@@ -83,6 +83,8 @@ struct f_splitdim {
 } // namespace internal
 } // namespace kdtree
 
+#include "../internal/abs.hpp"
+
 template<typename result_t, typename f_process, typename f_splitdim, 
          typename F, typename T, T dim, kdtree::container::layout maj,
          typename C_query, typename C_tree> 
@@ -100,7 +102,7 @@ kdtree::traverse(result_t& result, const C_query& q, const C_tree& tree,
   T prev{-1};
 
   using kdtree::container::id;
-  using namespace std;
+  using kdtree::internal::abs;
 
   while (1) {
 

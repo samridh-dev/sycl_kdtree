@@ -62,7 +62,7 @@ kdtree::internal::min(const T a, const T b) {
 
 template <typename T>
 constexpr inline T
-kdtree::internal::min(const T a, const T b) {
+kdtree::internal::max(const T a, const T b) {
   return (a > b) ? a : b;
 }
 
