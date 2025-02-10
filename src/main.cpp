@@ -74,7 +74,7 @@ main(void) {
   
   constexpr auto   maj  {kdtree::container::layout::row_major};
   constexpr type_s dim  {3};
-  constexpr type_s n    {1 << 17};
+  constexpr type_s n    {1 << 18};
   constexpr type_s k    {128};
 
   kdtree::context ctx;
