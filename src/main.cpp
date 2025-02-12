@@ -2,6 +2,8 @@
 #include <random>
 #include <chrono>
 
+#include <fstream>
+
 #include <kdtree.hpp>
 #include <omp.h>
 
@@ -75,12 +77,11 @@ main(void) {
   constexpr auto   maj  {kdtree::container::layout::row_major};
   constexpr type_s dim  {3};
   constexpr type_s n    {1 << 18};
-  constexpr type_s k    {128};
+  constexpr type_s k    {64};
 
   kdtree::context ctx;
 
   std::vector<type_v> vec(dim * n);
-  std::vector<type_v> q(dim);
 
   std::cout << "[metadata] "
             << "dim : " << dim << ", "
@@ -110,38 +111,14 @@ main(void) {
   }
 
   const type_s imax{n};
-  const float  rmax{1e-0f};
+  const float  rmax{std::numeric_limits<float>::max()};
 
+  #if 0
   {
 
-    auto beg{std::chrono::high_resolution_clock::now()};
-    #pragma omp parallel for
-    for (type_s i = 0; i < imax; ++i) {
-
-      {
-        constexpr type_v v_min{0e0};
-        constexpr type_v v_max{1e0};
-        std::mt19937 rng(std::random_device{}());
-        std::uniform_real_distribution<type_v> dist(v_min, v_max);
-        for (auto& qi : q) { qi = dist(rng); }
-      }
-
-      const auto idx = kdtree::nn<float, int, dim, maj>(ctx, q, vec, n, rmax);
-
-      sink = idx;
-
-    }
-
-    auto end{std::chrono::high_resolution_clock::now()};
-    auto dur{std::chrono::duration_cast<std::chrono::milliseconds>(end - beg)};
-    std::cout << "[kdtree::nn]: " << dur.count() << " ms" << std::endl;
-
-  }
-
-  {
+    std::ofstream fp("out.dat");
 
     auto beg{std::chrono::high_resolution_clock::now()};
-    #pragma omp parallel for
     for (type_s i = 0; i < imax; ++i) {
 
       {
@@ -154,13 +131,45 @@ main(void) {
 
       auto idx = kdtree::knn<float, int, dim, maj>(ctx, q, vec, n, k);
 
-      sink = idx[k-1];
+      fp<<i<<"\t:\t"; for (const auto& idxi: idx) fp<<idxi<<"\t"; fp<<"\n";
 
     }
 
     auto end{std::chrono::high_resolution_clock::now()};
     auto dur{std::chrono::duration_cast<std::chrono::milliseconds>(end - beg)};
     std::cout << "[kdtree::knn]: " << dur.count() << " ms" << std::endl;
+
+  }
+  #endif
+
+
+  {
+
+    std::vector<int>    vidx(n, 0);
+    std::vector<type_v> q(dim, 0);
+
+    auto beg{std::chrono::high_resolution_clock::now()};
+    #pragma omp parallel for
+    for (type_s i = 0; i < n; ++i) {
+
+      for (type_s j = 0; j < dim; ++j) {
+        q[j] = kdtree::container::id<int, dim, maj>(vec, n, i, j);
+      }
+
+      vidx[i] = kdtree::nn<float, int, dim, maj>(ctx, q, vec, n, rmax);
+    }
+
+      for (type_s j = 0; j < dim; ++j) {
+        std::cout << kdtree::container::id<int, dim, maj>(vec, n, 4, j) << " ";
+      } std::cout << std::endl;
+      for (type_s j = 0; j < dim; ++j) {
+        std::cout << kdtree::container::id<int, dim, maj>(vec, n, vidx[4], j) << " ";
+      } std::cout << std::endl;
+
+
+    auto end{std::chrono::high_resolution_clock::now()};
+    auto dur{std::chrono::duration_cast<std::chrono::milliseconds>(end - beg)};
+    std::cout << "[kdtree::nn]: " << dur.count() << " ms" << std::endl;
 
   }
 
