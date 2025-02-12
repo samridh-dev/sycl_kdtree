@@ -1,5 +1,5 @@
 /*!
- * \file        create/create.hpp
+ * \file        internal/clz.hpp
  * \author      Samridh D. Singh
  * \date        2025-02-01
  * \brief       kdtree create header and implementation
@@ -23,25 +23,23 @@
  *              If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef KDTREE_CREATE_HPP
-#define KDTREE_CREATE_HPP
+#ifndef KDTREE_INTERNAL_SPATIAL_HPP
+#define KDTREE_INTERNAL_SPATIAL_HPP
 
+#include "../pch.hpp"
 
-#include "../container.hpp"
+namespace kdtree   {
+namespace internal {
 
-namespace kdtree {
+template <typename T>
+requires std::is_integral_v<T>
+constexpr inline T
+set_dimension(const T n);
 
-template <typename T, T dim, 
-          kdtree::container::layout maj = kdtree::container::layout::row_major, 
-          typename C, typename N>
-requires kdtree::container::container<C> 
-      && std::is_integral_v<T>
-      && std::is_integral_v<N>
-void
-create(kdtree::context& ctx, C& src, const N n);
-
+} // namespace internal
 } // namespace kdtree
-  
+
+ 
 ///////////////////////////////////////////////////////////////////////////////
 ///                                                                         ///
 ///                                                                         ///
@@ -56,67 +54,5 @@ create(kdtree::context& ctx, C& src, const N n);
 ///                                                                         ///
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "internal/payload.hpp"
-#include "internal/F.hpp"
 
-#include "../internal/bsr.hpp"
-#include "../sort/sort.hpp"
-
-#include "tags.hpp"
-
-#define USE_BENCHMARK 1
-
-#if USE_BENCHMARK
-#include <chrono>
-#endif
-
-template <typename T, T dim, kdtree::container::layout maj, 
-          typename C, typename N>
-requires kdtree::container::container<C> 
-      && std::is_integral_v<T>
-      && std::is_integral_v<N>
-void
-kdtree::create(kdtree::context& ctx, C& src, const N n) {
-
-  using namespace kdtree::internal::create;
-
-  const T n_{static_cast<T>(n)};
-
-  std::vector<T> tag(n_, 0);
-
-  for (T l{0}; l < kdtree::internal::bsr(n_) + T{1}; ++l) {
-
-    #if USE_BENCHMARK
-    auto beg = std::chrono::high_resolution_clock::now();
-    #endif
-
-    {
-      const T d  {l % dim}; // TODO: template this away
-      const T n0 {0};
-      payload<T, dim, maj, decltype(src), decltype(tag)> p(src, tag, n_, d);
-      kdtree::sort(ctx, p, n0, n_);
-    }
-
-    #if USE_BENCHMARK
-    auto end = std::chrono::high_resolution_clock::now();
-    auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end - beg);
-    std::cout << "\t[sort] time: " << dur.count() << " ms" << std::endl;
-    #endif
-
-    #if USE_BENCHMARK
-    beg = std::chrono::high_resolution_clock::now();
-    #endif
-
-    tags::update(ctx, tag, n_, l);
-
-    #if USE_BENCHMARK
-    end = std::chrono::high_resolution_clock::now();
-    dur = std::chrono::duration_cast<std::chrono::milliseconds>(end - beg);
-    std::cout << "\t[update] time: " << dur.count() << " ms" << std::endl;
-    #endif
-
-  }
-
-}
-
-#endif // KDTREE_CREATE_HPP
+#endif // KDTREE_INTERNAL_SPATIAL_HPP

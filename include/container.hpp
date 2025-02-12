@@ -83,7 +83,6 @@ using get_primitive_t = typename get_primitive_impl<C>::type;
 
 // ID
 
-KD__IMPLEMENTATION
 template <typename T, T dim, kdtree::container::layout maj, typename C>
 requires container<C> && std::is_integral_v<T>
 constexpr auto&
@@ -111,7 +110,16 @@ id(C& v, const T n, const T i_, const T j_) {
 
 }
 
-KD__IMPLEMENTATION
+template <typename T, typename C>
+requires container<C> && std::is_integral_v<T>
+constexpr auto&
+id(C& v, const T n, const T i_) {
+  
+  (void) n;
+  return v[static_cast<std::make_unsigned_t<T>>(i_)];
+
+}
+
 template <typename T, T dim, kdtree::container::layout maj, typename C>
 requires container<C> && std::is_integral_v<T>
 constexpr void

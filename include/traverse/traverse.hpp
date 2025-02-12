@@ -107,13 +107,14 @@ kdtree::traverse(result_t& result, const C_query& q, const C_tree& tree,
   while (1) {
 
     const bool from_parent { prev < curr              };
-    const T         parent { (curr + 1) / T{2} - T{1} };
+    const T    parent      { (curr + 1) / T{2} - T{1} };
 
     if (curr >= n) {
       prev = curr;
       curr = parent;
       continue;
     }
+
 
     if (from_parent) {
       f_process{}(result, q, tree, n, curr, &rmax);

@@ -89,6 +89,18 @@ struct f_process {
       euclidian<F, T, dim, maj, C_query, maj, C_tree>(q, 1, 0, src, n, idx)
     };
 
+#if 1
+    const bool b1 { (dst) && (dst < res.dst) };
+    const bool b2 { b1 && (dst < *rmax)              };
+    res.dst = b1 * dst + (1 - b1) * res.dst;
+    res.idx = b1 * idx + (1 - b1) * res.idx;
+    *rmax   = b2 * dst + (1 - b2) * (*rmax);
+#else
+    
+    if (dst == F{0}) {
+      return;
+    }
+
     if (dst < res.dst) {
 
       res.dst = dst;
@@ -99,6 +111,8 @@ struct f_process {
       }
 
     }
+
+#endif
 
   }
 };

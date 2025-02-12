@@ -93,11 +93,11 @@ maxheapify(C_idx& idx, C_dst& dst, const T k, const T i = T{0}) {
     T b       {     j     };
     const T l { 2 * j + 1 };
     const T r { 2 * j + 2 };
-    if (l < k && dst[l] > dst[b]) b = l;
-    if (r < k && dst[r] > dst[b]) b = r;
+    if (l < k && id<T>(dst, k, l) > id<T>(dst, k, b)) b = l;
+    if (r < k && id<T>(dst, k, r) > id<T>(dst, k, b)) b = r;
     if (b == j) break;
-    kdtree::container::swap<T, T{1}, maj>(idx, k, j, b);
-    kdtree::container::swap<T, T{1}, maj>(dst, k, j, b);
+    swap<T, T{1}, maj>(idx, k, j, b);
+    swap<T, T{1}, maj>(dst, k, j, b);
     j = b;
   }
 
@@ -197,6 +197,7 @@ kdtree::knn(const kdtree::context& ctx,
             const T               n,
             const T               k,
             const F               rmax) {
+
   using kdtree::internal::traverse::f_splitdim;
   using kdtree::internal::knn::f_process;
   using kdtree::internal::knn::result_t;

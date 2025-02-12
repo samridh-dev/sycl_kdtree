@@ -1,3 +1,4 @@
+CXX_COMPILER   = icpx
 BUILD_DIR      = cmake/build
 BUILD_TEST_DIR = cmake/build_test
 BIN_DIR        = bin
@@ -17,11 +18,11 @@ all: $(BUILD_DIR)/Makefile
 
 $(BUILD_DIR)/Makefile:
 	mkdir -p $(BUILD_DIR)
-	cd $(BUILD_DIR) && cmake -DBUILD_TESTS=OFF \
+	cd $(BUILD_DIR) && cmake -DBUILD_TESTS=OFF -DCMAKE_CXX_COMPILER=$(shell command -v ${CXX_COMPILER}) \
 		-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) ../..
 
 .PHONY: fast
-fast:
+fast: clean
 	$(MAKE) CMAKE_BUILD_TYPE=Release all
 
 .PHONY: run
@@ -35,12 +36,13 @@ test: $(BUILD_TEST_DIR)/Makefile
 
 $(BUILD_TEST_DIR)/Makefile:
 	mkdir -p $(BUILD_TEST_DIR)
-	cd $(BUILD_TEST_DIR) && cmake -DBUILD_TESTS=ON \
+	cd $(BUILD_TEST_DIR) && cmake -DBUILD_TESTS=ON -DCMAKE_CXX_COMPILER=$(shell command -v ${CXX_COMPILER}) \
 		-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) $(TEST_ARG) ../..
 
 .PHONY: clean
 clean:
-	rm -rf $(BUILD_DIR) $(BUILD_TEST_DIR) $(BIN_DIR)
+	rm -rf $(BUILD_DIR) $(BUILD_TEST_DIR)
+	find $(BIN_DIR) -type f -delete
 
 .PHONY: rebuild
 rebuild: clean all

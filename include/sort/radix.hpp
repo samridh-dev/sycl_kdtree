@@ -1,8 +1,8 @@
 /*!
- * \file        libsycl.hpp
+ * \file        sort/sort.hpp
  * \author      Samridh D. Singh
  * \date        2025-02-01
- * \brief       
+ * \brief       containers for templates 
  * \details     
  *
  * \copyright   This file is part of the sycl_kdtree project.
@@ -23,45 +23,18 @@
  *              If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef KDTREE_PRECOMPILED_HEADER_HPP
-#define KDTREE_PRECOMPILED_HEADER_HPP
+#ifndef KDTREE_SORT_HPP
+#define KDTREE_SORT_HPP
 
-//#include <concepts> 
-//#include <type_traits>
-
-#include <cstddef>
-#include <stdexcept>
-
-#include <concepts>
-#include <type_traits>
-#include <thread>
-
-// NOTE: tested for the following compilers
-#if defined(__INTEL_LLVM_COMPILER) || defined(__ADAPTIVECPP__) 
-
-  #if   defined(__INTEL_LLVM_COMPILER)
-  #include <CL/sycl.hpp>
-  #elif defined(__ADAPTIVECPP__)
-  #include <sycl/sycl.hpp>
-  #endif
-
-  #define KD__USING_SYCL
-  #define KD__IMPLEMENTATION SYCL_EXTERNAL
-
-#else
-
-  #define KD__IMPLEMENTATION
-
-#endif
+#include "../pch.hpp"
+#include "../container.hpp"
+#include "internal.hpp"
 
 namespace kdtree {
 
-struct context {
-  std::size_t nthreads;
-  context() : nthreads(std::thread::hardware_concurrency()) {}
-  explicit context(std::size_t threads) : nthreads(threads) {}
-};
+  template <typename payload_t, typename T>
+  requires kdtree::internal::sort::payload<payload_t> && std::integral<T>
+  void 
+  sort(const kdtree::context& ctx, payload_t& p, const T n0, const T n1);
 
 } // namespace kdtree
-
-#endif // KDTREE_PRECOMPILED_HEADER_HPP
