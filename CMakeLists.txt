@@ -17,29 +17,40 @@ option(BUILD_TESTS "Build tests" OFF)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 
-#  add_compile_options(-g -Wall -Wextra -Wpedantic -Werror -Wshadow -Wconversion -Wsign-conversion -Wuninitialized -Wmaybe-uninitialized)
-  set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
+#  add_compile_options(-g -Wall -Wextra -Wpedantic -Werror -Wshadow -Wconversion -Wsign-conversion -Wuninitialized -Wmaybe-uninitialized) 
 
-  add_compile_options(-fopenmp)
-  add_link_options(-fopenmp)
+  set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
 
   add_compile_options(-Wall -Werror -Wfatal-errors)
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -xHost -DNDEBUG")
 
-  add_compile_options(-fopenmp)
-  add_link_options(-fopenmp)
-
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+
   add_compile_options(/W4 /WX)
   set(CMAKE_CXX_FLAGS_RELEASE "/O2 /DNDEBUG")
 
-  add_compile_options(-fopenmp)
-  add_link_options(-fopenmp)
-
 endif()
 
+
+if (CMAKE_CXX_COMPILER MATCHES "icpx$")
+  set(CMAKE_CXX_FLAGS_RELEASE "-O3 \
+                               -march=native  \
+                               -funroll-loops \
+                               -g3 \
+                               -gline-tables-only \
+                               -fdebug-info-for-profiling \
+                               -debug inline-debug-info \
+                               -DNDEBUG")
+  add_compile_options(-qopenmp -fsycl)
+  add_link_options(-qopenmp -fsycl)
+endif()
+
+if (CMAKE_CXX_COMPILER MATCHES "acpp$")
+  add_compile_options(-fopenmp -fPIC)
+  add_link_options(-fopenmp -fPIC)
+endif()
 
 if(BUILD_TESTS)
   enable_testing()
