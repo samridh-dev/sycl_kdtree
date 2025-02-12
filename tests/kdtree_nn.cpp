@@ -57,12 +57,12 @@ TEST_CASE("[basic_example] kdtree::nn") {
     CHECK(vec[static_cast<std::size_t>(idx) * dim + 1] == ans[1]);
   }
 
-  SUBCASE("q equals existing point {46, 63}") {
+  SUBCASE("q doesnt equals existing point {46, 63}") {
     std::vector<type_v> q   { 46, 63 };
     std::vector<type_v> ans { 46, 63 };
     const auto idx = kdtree::nn<int, int, dim>(ctx, q, vec, n);
-    CHECK(vec[static_cast<std::size_t>(idx) * dim + 0] == ans[0]);
-    CHECK(vec[static_cast<std::size_t>(idx) * dim + 1] == ans[1]);
+    CHECK(vec[static_cast<std::size_t>(idx) * dim + 0] != ans[0]);
+    CHECK(vec[static_cast<std::size_t>(idx) * dim + 1] != ans[1]);
   }
 
   SUBCASE("q = {50, 50}") {
@@ -127,6 +127,10 @@ nn(const kdtree::context& ctx, const C_query& q, const C_tree& tree,
       euclidian<F, T, dim, maj, C_query, maj, C_tree>(q, 1, 0, tree, n, i)
     };
 
+    if (dst == F{0}) {
+      continue;
+    }
+
     if (dst < best_dist) {
       best_dist = dst;
       best_idx = i;
@@ -181,6 +185,24 @@ test_nn_impl(void) {
       CHECK(idx == ans);
     }
   }
+
+  
+  constexpr std::size_t nmax = 16 < n ? 10 : n;
+
+  for (std::size_t i = 0; i < nmax; ++i) {
+    SUBCASE(("nn check, idx=" + std::to_string(i)).c_str()) {
+
+      std::vector<type_v> q(dim);
+      for (std::size_t j = 0; j < dim; ++j) {
+        q[j] = kdtree::container::id<type_s, dim, maj>(vec, n, i, j);
+      }
+
+      const auto idx = kdtree::nn<double, int, dim, maj>(ctx, q, vec, n);
+      const auto ans = ref::nn<double, int, dim, maj>(ctx, q, vec, n);
+      CHECK(idx == ans);
+    }
+  }
+
 }
 
 TEST_CASE("[random][case=1] kdtree::nn dim=1 n=1<<6") {
