@@ -20,8 +20,8 @@
  */
 #include "pch.h"
 
+#include <knn/knn.hpp>
 #include <create/create.hpp>
-#include <knn.hpp>
 
 #include <random>
 #include <limits>
