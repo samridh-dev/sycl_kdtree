@@ -85,6 +85,8 @@ struct f_splitdim {
 
 #include "../internal/abs.hpp"
 
+#if 0
+
 template<typename result_t, typename f_process, typename f_splitdim, 
          typename F, typename T, T dim, kdtree::container::layout maj,
          typename C_query, typename C_tree> 
@@ -98,7 +100,7 @@ constexpr void
 kdtree::traverse(result_t& result, const C_query& q, const C_tree& tree, 
                  const T n, F rmax) {
 
-  T curr{0};
+  T curr{ 0};
   T prev{-1};
 
   using kdtree::container::id;
@@ -114,7 +116,6 @@ kdtree::traverse(result_t& result, const C_query& q, const C_tree& tree,
       curr = parent;
       continue;
     }
-
 
     if (from_parent) {
       f_process{}(result, q, tree, n, curr, &rmax);
@@ -133,7 +134,7 @@ kdtree::traverse(result_t& result, const C_query& q, const C_tree& tree,
     if (from_parent) {
       next = close_child;
     } else if (prev == close_child) {
-      next = far_in_range ? far_child :parent;
+      next = far_in_range ? far_child : parent;
     } else {
       next = parent;
     }
@@ -148,5 +149,72 @@ kdtree::traverse(result_t& result, const C_query& q, const C_tree& tree,
   }
 
 }
+
+#else
+
+template<typename result_t, typename f_process, typename f_splitdim, 
+         typename F, typename T, T dim, kdtree::container::layout maj,
+         typename C_query, typename C_tree> 
+requires kdtree::container::container_1d<C_query> 
+      && kdtree::container::container<C_tree>
+      && std::is_integral_v<T>
+      && std::is_arithmetic_v<F>
+      && std::is_same_v<kdtree::container::get_primitive_t<C_query>,
+                        kdtree::container::get_primitive_t<C_tree>>
+constexpr void
+kdtree::traverse(result_t& result, const C_query& q, const C_tree& tree, 
+                 const T n, F rmax) {
+
+  T curr { 0 };
+  T prev { static_cast<T>(-1) };
+
+  using kdtree::container::id;
+  using kdtree::internal::abs;
+
+  while (1) {
+
+    const bool from_parent { (prev + 1) <= curr };
+    const T    parent      { (curr + 1) / T{2} - T{1} };
+
+    if (curr >= n) {
+      prev = curr;
+      curr = parent;
+      continue;
+    }
+
+    if (from_parent) {
+      f_process{}(result, q, tree, n, curr, &rmax);
+    }
+
+    const auto s_dim        { f_splitdim{}(tree, curr)                 };
+    const auto s_pos        { id<T, dim,  maj>(tree, n,   curr, s_dim) };
+    const auto q_pos        { id<T, T{1}, maj>(q,    dim, T{0}, s_dim) };
+    const auto sign_dist    { static_cast<F>(q_pos - s_pos)            };
+    const auto close_side   { sign_dist > F{0}                         };
+    const auto close_child  { T{2} * curr + T{1} + close_side          };
+    const auto far_child    { T{2} * curr + T{2} - close_side          };
+    const auto far_in_range { abs(sign_dist) <= rmax                   };
+
+    T next;
+    if (from_parent) {
+      next = close_child;
+    } else if (prev == close_child) {
+      next = far_in_range ? far_child : parent;
+    } else {
+      next = parent;
+    }
+
+    if (next == static_cast<T>(-1)) {
+      return;
+    }
+
+    prev = curr;
+    curr = next;
+
+  }
+
+}
+
+#endif
 
 #endif  // KDTREE_TRAVERSE_HPP
