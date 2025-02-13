@@ -17,7 +17,7 @@ option(BUILD_TESTS "Build tests" OFF)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 
-#  add_compile_options(-g -Wall -Wextra -Wpedantic -Werror -Wshadow -Wconversion -Wsign-conversion -Wuninitialized -Wmaybe-uninitialized) 
+  #  add_compile_options(-g -Wall -Wextra -Wpedantic -Werror -Wshadow -Wconversion -Wsign-conversion -Wuninitialized -Wmaybe-uninitialized) 
 
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 
@@ -35,6 +35,7 @@ endif()
 
 
 if (CMAKE_CXX_COMPILER MATCHES "icpx$")
+  #  add_compile_options(-g -Wall -Wextra -Wpedantic -Werror -Wshadow -Wconversion -Wsign-conversion -Wuninitialized -Wmaybe-uninitialized) 
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 \
                                -march=native  \
                                -funroll-loops \
