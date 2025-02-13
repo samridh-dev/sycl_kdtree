@@ -6,12 +6,11 @@
 #include <iostream>
 #include <fstream>
 
-
 #include <kdtree.hpp>
 #include <omp.h>
 
 using T_v = float;
-using T_s = int;
+using T_s = uint32_t;
 
 constexpr auto maj  { kdtree::container::layout::row_major   };
 constexpr T_s dim   { 3                                      };
@@ -27,23 +26,35 @@ main(void) {
   {
     sycl::device device = queue.get_device();
     std::cout << "Queue Information:\n";
-    std::cout << "  Device Name       : " << device.get_info<sycl::info::device::name>() << "\n";
-    std::cout << "  Vendor            : " << device.get_info<sycl::info::device::vendor>() << "\n";
+    std::cout << "  Device Name       : " 
+              << device.get_info<sycl::info::device::name>() << "\n";
+    std::cout << "  Vendor            : " 
+              << device.get_info<sycl::info::device::vendor>() << "\n";
     std::cout << "  Device Type       : ";
     switch (device.get_info<sycl::info::device::device_type>()) {
-        case sycl::info::device_type::cpu: std::cout << "CPU"; break;
-        case sycl::info::device_type::gpu: std::cout << "GPU"; break;
-        case sycl::info::device_type::accelerator: std::cout << "Accelerator"; break;
-        default: std::cout << "Unknown";
+      case sycl::info::device_type::cpu: 
+        std::cout << "CPU"; break;
+      case sycl::info::device_type::gpu: 
+        std::cout << "GPU"; break;
+      case sycl::info::device_type::accelerator: 
+        std::cout << "Accelerator"; break;
+      default: 
+        std::cout << "Unknown";
     }
     std::cout << "\n";
-    std::cout << "  Max Compute Units : " << device.get_info<sycl::info::device::max_compute_units>() << "\n";
+    std::cout << "  Max Compute Units : " 
+              << device.get_info<sycl::info::device::max_compute_units>() 
+              << "\n";
     std::cout << "  Global Memory     : " 
-              << device.get_info<sycl::info::device::global_mem_size>() / (1024 * 1024) << " MB\n";
+              << device.get_info<sycl::info::device::global_mem_size>() 
+                 / (1024 * 1024) 
+              << " MB\n";
     std::cout << "  Local Memory      : " 
-              << device.get_info<sycl::info::device::local_mem_size>() / 1024 << " KB\n";
+              << device.get_info<sycl::info::device::local_mem_size>() / 1024 
+              << " KB\n";
     std::cout << "  Max Work Group Size: " 
-              << device.get_info<sycl::info::device::max_work_group_size>() << "\n";
+              << device.get_info<sycl::info::device::max_work_group_size>() 
+              << "\n";
   }
 
   std::cout << "Metadata:\n";
@@ -90,8 +101,8 @@ main(void) {
 
     auto beg { std::chrono::high_resolution_clock::now() };
     kdtree::create<T_s, dim, maj>(ctx, vec, n);
-    auto end { std::chrono::high_resolution_clock::now() };
-    auto dur { std::chrono::duration_cast<std::chrono::milliseconds>(end - beg) };
+    auto end {std::chrono::high_resolution_clock::now()};
+    auto dur {std::chrono::duration_cast<std::chrono::milliseconds>(end - beg)};
     std::cout << "[kdtree::create]: " << dur.count() << " ms\n";
 
     std::ofstream ofs("kdtree_n" + std::to_string(dim * n) + ".dat",
@@ -133,8 +144,9 @@ main(void) {
   });
 
   queue.wait_and_throw();
-  auto end { std::chrono::high_resolution_clock::now() };
-  auto dur { std::chrono::duration_cast<std::chrono::milliseconds>(end - beg) };
+
+  auto end {std::chrono::high_resolution_clock::now()};
+  auto dur {std::chrono::duration_cast<std::chrono::milliseconds>(end - beg)};
 
   std::cout << "[kdtree::nn][time]:\t" 
             << dur.count() << " ms\n";

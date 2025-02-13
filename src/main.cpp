@@ -12,10 +12,11 @@ volatile int sink = 0;
 int
 main(void) {
 
-#if 0
+#if 1
 
   using type_v = int;
-  using type_s = std::size_t;
+  using type_s = int;
+  using type_f = float;
 
   constexpr type_s dim = 2;
   constexpr type_s n   = 10;
@@ -45,34 +46,21 @@ main(void) {
   for (auto v : vec) std::cout << v << " ";
   std::cout << std::endl;
 
-  std::vector<type_v> q{ 50, 50 };
+  std::vector<type_v> q{ 1, 1 };
 
-  const auto idx = kdtree::nn<int, int, dim>(ctx, q, vec, n);
+  const auto idx = kdtree::nn<type_f, type_s, dim>(ctx, q, vec, n);
 
   std::cout << "Nearest neighbor index: " << idx << "\n";
   std::cout << "Nearest neighbor coordinates: ("
             << vec[static_cast<std::size_t>(idx) * dim + 0] << ", "
             << vec[static_cast<std::size_t>(idx) * dim + 1] << ")\n";
 
-  constexpr int k {4};
-  const auto kidx = kdtree::knn<int, int, dim>(ctx, q, vec, n, k);
-
-  std::cout << "k-Nearest neighbor index: ";
-  for (auto ki: kidx) std::cout << ki << " "; 
-  std::cout << std::endl;
-
-  std::cout << "k-Nearest neighbor coordinates: ";
-  for (auto ki: kidx) std::cout << " ("
-            << vec[static_cast<std::size_t>(ki) * dim + 0] << ", "
-            << vec[static_cast<std::size_t>(ki) * dim + 1] << ") ";
-  std::cout << std::endl;
-
   return 0;
 
 #else
 
   using type_v = float;
-  using type_s = std::size_t;
+  using type_s = int;
   
   constexpr auto   maj  {kdtree::container::layout::row_major};
   constexpr type_s dim  {3};
@@ -82,6 +70,7 @@ main(void) {
   kdtree::context ctx;
 
   std::vector<type_v> vec(dim * n);
+  std::vector<type_v> q(dim, 0);
 
   std::cout << "[metadata] "
             << "dim : " << dim << ", "
@@ -113,7 +102,7 @@ main(void) {
   const type_s imax{n};
   const float  rmax{std::numeric_limits<float>::max()};
 
-  #if 0
+  #if 1
   {
 
     std::ofstream fp("out.dat");
@@ -145,25 +134,24 @@ main(void) {
 
   {
 
-    std::vector<int>    vidx(n, 0);
-    std::vector<type_v> q(dim, 0);
+    std::vector<type_s>    vidx(n, 0);
 
     auto beg{std::chrono::high_resolution_clock::now()};
     #pragma omp parallel for
     for (type_s i = 0; i < n; ++i) {
 
       for (type_s j = 0; j < dim; ++j) {
-        q[j] = kdtree::container::id<int, dim, maj>(vec, n, i, j);
+        q[j] = kdtree::container::id<type_s, dim, maj>(vec, n, i, j);
       }
 
-      vidx[i] = kdtree::nn<float, int, dim, maj>(ctx, q, vec, n, rmax);
+      vidx[i] = kdtree::nn<float, type_s, dim, maj>(ctx, q, vec, n, rmax);
     }
 
       for (type_s j = 0; j < dim; ++j) {
-        std::cout << kdtree::container::id<int, dim, maj>(vec, n, 4, j) << " ";
+        std::cout << kdtree::container::id<type_s, dim, maj>(vec, n, 4, j) << " ";
       } std::cout << std::endl;
       for (type_s j = 0; j < dim; ++j) {
-        std::cout << kdtree::container::id<int, dim, maj>(vec, n, vidx[4], j) << " ";
+        std::cout << kdtree::container::id<type_s, dim, maj>(vec, n, vidx[4], j) << " ";
       } std::cout << std::endl;
 
 
