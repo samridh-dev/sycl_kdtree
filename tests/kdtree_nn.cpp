@@ -21,8 +21,8 @@
 
 #include "pch.h"
 
+#include <nn/nn.hpp>
 #include <create/create.hpp>
-#include <nn.hpp>
 
 TEST_CASE("[basic_example] kdtree::nn") {
 
@@ -98,6 +98,84 @@ TEST_CASE("[basic_example] kdtree::nn") {
   }
 
 }
+
+#if 1
+TEST_CASE("[basic_example][unsigned] kdtree::nn") {
+
+  using type_v = int;
+  using type_s = std::size_t;
+  using type_f = float;
+
+  constexpr type_s dim = 2;
+  constexpr type_s n   = 10;
+
+  kdtree::context ctx;
+
+  std::vector<type_v> vec = {
+    10, 15,
+    46, 63,
+    68, 21,
+    40, 33,
+    25, 54,
+    15, 43,
+    44, 58,
+    45, 40,
+    62, 69,
+    53, 67,
+  };
+
+  kdtree::create<type_s, dim>(ctx, vec, n);
+
+  SUBCASE("q = {1, 1}") {
+    std::vector<type_v> q   { 1, 1 };
+    std::vector<type_v> ans { 10, 15 };
+    const auto idx = kdtree::nn<type_f, type_s, dim>(ctx, q, vec, n);
+    CHECK(vec[static_cast<std::size_t>(idx) * dim + 0] == ans[0]);
+    CHECK(vec[static_cast<std::size_t>(idx) * dim + 1] == ans[1]);
+  }
+
+  SUBCASE("q doesnt equals existing pouint32_t {46, 63}") {
+    std::vector<type_v> q   { 46, 63 };
+    std::vector<type_v> ans { 46, 63 };
+    const auto idx = kdtree::nn<type_f, type_s, dim>(ctx, q, vec, n);
+    CHECK(vec[static_cast<std::size_t>(idx) * dim + 0] != ans[0]);
+    CHECK(vec[static_cast<std::size_t>(idx) * dim + 1] != ans[1]);
+  }
+
+  SUBCASE("q = {50, 50}") {
+    std::vector<type_v> q   { 50, 50 };
+    std::vector<type_v> ans { 44, 58 };
+    const auto idx = kdtree::nn<type_f, type_s, dim>(ctx, q, vec, n);
+    CHECK(vec[static_cast<std::size_t>(idx) * dim + 0] == ans[0]);
+    CHECK(vec[static_cast<std::size_t>(idx) * dim + 1] == ans[1]);
+  }
+
+  SUBCASE("q = {70, 20}") {
+    std::vector<type_v> q   { 70, 20 };
+    std::vector<type_v> ans { 68, 21 };
+    const auto idx = kdtree::nn<type_f, type_s, dim>(ctx, q, vec, n);
+    CHECK(vec[static_cast<std::size_t>(idx) * dim + 0] == ans[0]);
+    CHECK(vec[static_cast<std::size_t>(idx) * dim + 1] == ans[1]);
+  }
+
+  SUBCASE("q = {48, 45}") {
+    std::vector<type_v> q   { 48, 45 };
+    std::vector<type_v> ans { 45, 40 };
+    const auto idx = kdtree::nn<type_f, type_s, dim>(ctx, q, vec, n);
+    CHECK(vec[static_cast<std::size_t>(idx) * dim + 0] == ans[0]);
+    CHECK(vec[static_cast<std::size_t>(idx) * dim + 1] == ans[1]);
+  }
+
+  SUBCASE("q = {100, 100}") {
+    std::vector<type_v> q   { 100, 100 };
+    std::vector<type_v> ans { 62, 69 };
+    const auto idx = kdtree::nn<type_f, type_s, dim>(ctx, q, vec, n);
+    CHECK(vec[static_cast<std::size_t>(idx) * dim + 0] == ans[0]);
+    CHECK(vec[static_cast<std::size_t>(idx) * dim + 1] == ans[1]);
+  }
+
+}
+#endif
 
 namespace ref {
 
@@ -197,7 +275,7 @@ test_nn_impl(void) {
         q[j] = kdtree::container::id<type_s, dim, maj>(vec, n, i, j);
       }
 
-      const auto idx = kdtree::nn<double, int, dim, maj>(ctx, q, vec, n);
+      const auto idx = kdtree::nn<double, uint32_t, dim, maj>(ctx, q, vec, n);
       const auto ans = ref::nn<double, int, dim, maj>(ctx, q, vec, n);
       CHECK(idx == ans);
     }
