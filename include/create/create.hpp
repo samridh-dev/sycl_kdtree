@@ -64,7 +64,7 @@ create(kdtree::context& ctx, C& src, const N n);
 
 #include "tags.hpp"
 
-#define USE_BENCHMARK 1
+#define USE_BENCHMARK 0
 
 #if USE_BENCHMARK
 #include <chrono>
