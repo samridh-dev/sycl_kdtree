@@ -82,12 +82,23 @@ struct kdtree::internal::create::payload {
   requires std::is_integral_v<int_t>
   inline bool
   less(const int_t i_, const int_t j_) {
-    return (tag[i_] < tag[j_]) ||
-     (
-       (tag[i_] == tag[j_]) &&
-       (kdtree::container::id<int_t, dim, maj>(src, n, i_, d) <
-        kdtree::container::id<int_t, dim, maj>(src, n, j_, d))
-     );
+
+    return (
+             kdtree::container::id<int_t>(tag, n, i_)
+             <
+             kdtree::container::id<int_t>(tag, n, j_)
+           ) || (
+             (
+               kdtree::container::id<int_t>(tag, n, i_)
+               ==
+               kdtree::container::id<int_t>(tag, n, j_)
+             ) && (
+               kdtree::container::id<int_t, dim, maj>(src, n, i_, d) 
+               <
+               kdtree::container::id<int_t, dim, maj>(src, n, j_, d)
+             )
+           );
+
   }
 
 };
