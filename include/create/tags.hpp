@@ -83,12 +83,21 @@ kdtree::internal::create::tags::update(const kdtree::context& ctx,
     const T c{arr[i]};
     const T p{sb(c, n, L) + ss(l_child(c), n, L)};
 
+#if 0
     if (i < p) {
       arr[i] = l_child(c);
     } else if (i > p) {
       arr[i] = r_child(c);
     } else {
     }
+#else
+    if (i < p) {
+      kdtree::container::id<T>(arr, n, i) = l_child(c);
+    } else if (i > p) {
+      kdtree::container::id<T>(arr, n, i) = r_child(c);
+    } else {
+    }
+#endif
 
   }
 
