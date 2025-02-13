@@ -53,7 +53,11 @@ abs(const T n);
 template <typename T>
 constexpr inline T
 kdtree::internal::abs(const T n) {
+#ifdef KD__USING_SYCL
+  return sycl::abs(n);
+#else
   return (n >= 0) ? n : -n;
+#endif
 }
 
 #endif // KDTREE_INTERNAL_ABS_HPP
