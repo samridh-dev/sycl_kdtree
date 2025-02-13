@@ -28,7 +28,7 @@
 
 #include "pch.hpp"
 #include "create/create.hpp"
-#include "nn.hpp"
-#include "knn.hpp"
+#include "nn/nn.hpp"
+#include "knn/knn.hpp"
 
 #endif // KDTREE_HPP
